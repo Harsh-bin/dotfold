@@ -22,11 +22,6 @@ remove_alias() {
     local file=$1
     if [ -f "$file" ]; then
         if grep -q "alias dotfold=" "$file" || grep -q "alias dotfoldtui=" "$file"; then
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                sed -i '' '/^# dotfold$/d' "$file"
-                sed -i '' '/^alias dotfold=/d' "$file"
-                sed -i '' '/^alias dotfoldtui=/d' "$file"
-            else
                 sed -i '/^# dotfold$/d' "$file"
                 sed -i '/^alias dotfold=/d' "$file"
                 sed -i '/^alias dotfoldtui=/d' "$file"
@@ -40,13 +35,7 @@ remove_alias() {
 
 sleep 0.5
 echo -e "\n🔧 Cleaning up shell configurations..."
-
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    remove_alias ~/.bash_profile
-    remove_alias ~/.bashrc  
-else
-    remove_alias ~/.bashrc  
-fi
+remove_alias ~/.bashrc  
 remove_alias ~/.zshrc
 sleep 0.5
 echo -e "\n${GREEN}🎉 Uninstall complete! Thanks for trying dotfold.${NC}"
