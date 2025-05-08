@@ -30,7 +30,6 @@ remove_alias() {
         else
             echo -e "ℹ️ No dotfold aliases found in: $file"
         fi
-    fi
 }
 
 sleep 0.5
