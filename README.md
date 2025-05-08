@@ -20,7 +20,7 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
 - Exclude those folders from being indexed by tools like tracker3 and locate
 - Now you’ve got the perfect hidden folder setup.
  ----
-### Other commnands 
+### Other commands 
    ```
    dotfold show hidden   # shows all hidden folders 
    ```
@@ -74,7 +74,7 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
      dotfold [command]   # CLI MODE
    ```
   3. Everything's done. NOW, enjoy!✌️
-### Uninstalling dotfold
+### ❌ Uninstalling dotfold
    ```
    chmod +x ./uninstall.sh
    ```
