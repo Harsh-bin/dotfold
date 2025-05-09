@@ -6,7 +6,7 @@ FOLDER_FILE="$HOME/.config/private/.folders"
 hash_password() {
   echo -n "$1" | sha256sum | awk '{print $1}'
 }
-encrypt_floder() {
+encrypt_folder() {
   echo -n "$1" | openssl enc -aes-256-cbc -salt -pass file:<(echo -n "$user_pass") -base64 -A 2>/dev/null
 }
 decrypt_folder() {
@@ -69,7 +69,7 @@ hide_folder() {
         folder_to_hide="$current_dir/$selected_dir"
         hidden_path="$current_dir/.$selected_dir"
         if mv -n "$folder_to_hide" "$hidden_path" 2>/dev/null; then
-          encrypted_path=$(encrypt_floder "$hidden_path")
+          encrypted_path=$(encrypt_folder "$hidden_path")
           if [ $? -eq 0 ]; then
             echo "$encrypted_path" >> "$FOLDER_FILE"
             gum style --foreground 9 "✅ Successfully hidden: $(basename "$folder_to_hide")"

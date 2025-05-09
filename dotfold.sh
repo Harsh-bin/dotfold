@@ -6,7 +6,7 @@ FOLDER_FILE="$HOME/.config/private/.folders"
 hash_password() {
   echo -n "$1" | sha256sum | awk '{print $1}'
 }
-encrypt_floder() {
+encrypt_folder() {
   echo -n "$1" | openssl enc -aes-256-cbc -salt -pass file:<(echo -n "$user_pass") -base64 -A 2>/dev/null
 }
 decrypt_folder() {
@@ -67,7 +67,7 @@ case "$1" in
       gum style --foreground 9 "❌ Failed to hide folder!"
       exit 1
     fi
-    encrypted_path=$(encrypt_floder "$hidden_path") || {
+    encrypted_path=$(encrypt_folder "$hidden_path") || {
       mv "$hidden_path" "$abs_path"
       gum style --foreground 9 "❌ Encryption failed! Reverting changes."
       exit 1
