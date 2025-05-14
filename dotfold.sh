@@ -333,6 +333,6 @@ case "$1" in
     echo "  dotfold unhide             Unhide a selected folder"
     echo "  dotfold change passwd      Change the encryption password"
     echo ""
-    echo "Note: Uses same password as secret.sh"
+    echo "Note: Uses same password as dotfoldtui"
     ;;
 esac
