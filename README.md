@@ -74,6 +74,8 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
      dotfold [command]   # CLI MODE
    ```
   3. Everything's done. NOW, enjoy!✌️
+### 📢 Run dotfoldtui first to initialize the files before using dotfold
+---
 ### ❌ Uninstalling dotfold
    ```
    chmod +x ./uninstall.sh
@@ -81,6 +83,7 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
    ```
    ./uninstall.sh
    ```
+---
 ## Changelog (v1.1)
 
 - **Enhanced Security**: When hiding a folder, its ownership is now changed to `root`, ensuring that unauthorized users cannot access it.
