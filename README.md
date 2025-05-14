@@ -3,7 +3,7 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
 ### 🔍 Preview
 ![](/preview/dotfold.png)
 --
-![](/preview/dotfold.gif)
+![](/preview/preview.gif)
 --
 # 🔵 CLI Usages
 ### Hiding folders
@@ -81,3 +81,9 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
    ```
    ./uninstall.sh
    ```
+## Changelog (v1.1)
+
+- **Enhanced Security**: When hiding a folder, its ownership is now changed to `root`, ensuring that unauthorized users cannot access it.
+- **Lock File Support**: Added a lock file that tracks the folder's owner, attempt count, attempt time, and lockout period.
+- **Password Protection**: Improved password security with a lockout mechanism, preventing bypass attempts.
+- **Multi-User Compatibility**: Enhanced functionality for multi-user systems to ensure consistent and secure access control.
