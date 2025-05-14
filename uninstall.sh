@@ -6,15 +6,14 @@ YELLOW='\033[1;33m'
 NC='\033[0m' 
 
 sleep 0.5
-
 echo -e "${YELLOW}🗑️ Starting dotfold Uninstaller${NC}"
 
 sleep 0.5
-if [ -d ~/.dotfold ]; then
-    rm -rf ~/.dotfold
-    echo -e "${GREEN}✅ Deleted: ~/.dotfold directory${NC}"
+if sudo test -d $HOME/.config/private/; then
+    sudo rm -rf $HOME/.config/private/
+    echo -e "${GREEN}✅ Deleted: $HOME/.config/private/ directory${NC}"
 else
-    echo -e "ℹ️ ~/.dotfold directory not found"
+    echo -e "ℹ️ $HOME/.config/private/ directory not found"
 fi
 sleep 0.5
 
@@ -36,5 +35,12 @@ sleep 0.5
 echo -e "\n🔧 Cleaning up shell configurations..."
 remove_alias ~/.bashrc  
 remove_alias ~/.zshrc
+sleep 0.3
+echo -e "\n🔐 Removing root permissions"
+if [ -f "/etc/sudoers.d/dotfold" ]; then
+    sudo rm /etc/sudoers.d/dotfold && echo -e "✅ Removed sudo permissions${NC}"
+else
+    echo -e "ℹ️ No dotfold sudo rules found (already removed?)."
+fi
 sleep 0.5
 echo -e "\n${GREEN}🎉 Uninstall complete! Thanks for trying dotfold.${NC}"

@@ -1,39 +1,133 @@
 #!/bin/bash
+USER_HOME="/home/$(logname)"
+PASS_FILE="$USER_HOME/.config/private/.passwd"
+LOCK_FILE="$USER_HOME/.config/private/.lock"
+FOLDER_FILE="$USER_HOME/.config/private/.folders"
+MAX_ATTEMPTS=3
+INITIAL_LOCKOUT=30
+LOCKOUT_INCREMENT=30
 
-PASS_FILE="$HOME/.config/private/.passwd"
-FOLDER_FILE="$HOME/.config/private/.folders"
-
-hash_password() {
+hash_passwd() {
   echo -n "$1" | sha256sum | awk '{print $1}'
 }
 encrypt_folder() {
-  echo -n "$1" | openssl enc -aes-256-cbc -salt -pass file:<(echo -n "$user_pass") -base64 -A 2>/dev/null
+  local folder="$1"
+  echo -n "$folder" | openssl enc -aes-256-cbc -salt -pass file:<(echo -n "$user_pass") -base64 -A 2>/dev/null
 }
 decrypt_folder() {
-  echo -n "$1" | openssl enc -d -aes-256-cbc -salt -pass file:<(echo -n "$user_pass") -base64 -A 2>/dev/null
+  local folder="$1"
+  echo -n "$folder" | openssl enc -d -aes-256-cbc -salt -pass file:<(echo -n "$user_pass") -base64 -A 2>/dev/null
 }
 input_passwd() {
   gum input --password --placeholder " 🔑 WHaats..the....PAsswd.... "
 }
+reencrypt_folders() {
+  local old_pass="$1"
+  local new_pass="$2"
+  local temp_file=$(mktemp)
+  while IFS= read -r encrypted_line; do
+    decrypted_path=$(echo -n "$encrypted_line" | openssl enc -d -aes-256-cbc -salt -pass file:<(echo -n "$old_pass") -base64 -A 2>/dev/null)
+    if [ $? -ne 0 ] || [ -z "$decrypted_path" ]; then
+      gum style --foreground 9 "❌ Decryption failed for an entry. Aborting password change."
+      rm -f "$temp_file"
+      return 1
+    fi
+    new_encrypted_path=$(echo -n "$decrypted_path" | openssl enc -aes-256-cbc -salt -pass file:<(echo -n "$new_pass") -base64 -A 2>/dev/null)
+    if [ $? -ne 0 ] || [ -z "$new_encrypted_path" ]; then
+      gum style --foreground 9 "❌ Encryption failed for an entry. Aborting password change."
+      rm -f "$temp_file"
+      return 1
+    fi
+    echo "$new_encrypted_path" >> "$temp_file"
+  done < <(sudo cat "$FOLDER_FILE")
+  sudo mv "$temp_file" "$FOLDER_FILE"
+}
 
-if [ ! -f "$PASS_FILE" ]; then
-  mkdir -p "$(dirname "$PASS_FILE")"
+inti_folder_file(){
+  if ! sudo test -f "$FOLDER_FILE"; then
+  sudo touch "$FOLDER_FILE"
+  fi
+}
+
+init_lockfile() {
+  {
+     echo "attempt_count=0"
+     echo "unlock_time=0"
+     echo "lockout=$INITIAL_LOCKOUT"
+     echo "owner=$(logname)"
+  } | sudo tee "$LOCK_FILE" >/dev/null
+}
+if ! sudo test -f "$LOCK_FILE"; then
+  init_lockfile
+fi
+eval "$(sudo cat "$LOCK_FILE")"
+current_time=$(date +%s)
+if [ "$unlock_time" -gt "$current_time" ]; then
+  remaining_time=$((unlock_time - current_time))
+  gum style --foreground 9 "🔒 Locked! Try again in $remaining_time seconds."
+  exit 1
+fi
+
+authenticate() {
+  while true; do
+    user_pass=$(input_passwd)
+    hashed_user_pass=$(hash_passwd "$user_pass")
+    stored_pass=$(sudo cat "$PASS_FILE" 2>/dev/null)
+    if [ "$hashed_user_pass" != "$stored_pass" ]; then
+    eval "$(sudo cat "$LOCK_FILE" 2>/dev/null)"
+      attempt_count=$((attempt_count + 1))
+      {
+        echo "attempt_count=$attempt_count"
+        echo "unlock_time=$unlock_time"
+        echo "lockout=$lockout"
+      } | sudo tee "$LOCK_FILE" >/dev/null
+      gum style --foreground 9 "❌ Access Denied (Attempt $attempt_count/$MAX_ATTEMPTS)"
+      if [ "$attempt_count" -ge "$MAX_ATTEMPTS" ]; then
+        unlock_time=$((current_time + lockout))
+        lockout=$((lockout + LOCKOUT_INCREMENT))
+        {
+          echo "attempt_count=$attempt_count"
+          echo "unlock_time=$unlock_time"
+          echo "lockout=$lockout"
+          echo "owner=$(logname)"
+        } | sudo tee "$LOCK_FILE" >/dev/null
+        gum style --foreground 9 "🔒 Too many attempts! Locking out for $((lockout - 30)) seconds..."
+        sleep "$lockout"
+        exit 1
+      fi
+    else
+      init_lockfile
+      break
+    fi
+  done
+}
+if ! sudo test -f "$PASS_FILE"; then
+  sudo mkdir -p "$(dirname "$PASS_FILE")"
   gum style --foreground 12 "🔐 First-time setup: Create a secure password"
   new_pass=$(gum input --password --placeholder "🔑 Set your secret key: ")
   confirm_pass=$(gum input --password --placeholder " Confirm your secret key: ")
+  if [ -z "$new_pass" ]; then
+     gum style --foreground 9 "❌ Password cannot be empty"
+  continue
+  fi
+  if [ "$new_pass" != "$confirm_pass" ]; then
+     gum style --foreground 9 "❌ Passwords do not match."
+  continue
+  fi
   if [ "$new_pass" = "$confirm_pass" ]; then
-    hash_password "$new_pass" > "$PASS_FILE"
-    chmod 600 "$PASS_FILE"
+    hash_passwd "$new_pass" | sudo tee "$PASS_FILE" >/dev/null
+    inti_folder_file
     gum style --foreground 10 "✅ Password set successfully!"
   else
     gum style --foreground 9 "❌ Passwords do not match retry..."
     exit 1
   fi
-fi
+fi  
+authenticate
 
 menu() {
   local menu_options
-  if [ -s "$FOLDER_FILE" ]; then
+  if sudo test -s "$FOLDER_FILE"; then
     menu_options="🌌 my-space\n📁 hide-folder\n🔓 un-hide-folder\n🔑 change-passwd\n🚪 Exit"
   else
     menu_options="🌌 my-space\n📁 hide-folder\n🔑 change-passwd\n🚪 Exit"
@@ -46,7 +140,12 @@ menu() {
                                 --color='fg:white,fg+:bright-white,bg+:bright-black' 
 }
 hide_folder() {
-  local current_dir="$HOME"
+  if sudo test -f "$LOCK_FILE"; then
+  owner=$(sudo grep '^owner=' "$LOCK_FILE" | cut -d'=' -f2)
+  if [ -n "$owner" ]; then
+  local current_dir="/home/$owner"
+  fi
+  fi
   while true; do
     selection=$(find "$current_dir" -maxdepth 1 -mindepth 1 -type d -not -name '.*' -printf '%f\n' | 
       awk 'BEGIN {print ".."} {print}' | 
@@ -55,7 +154,7 @@ hide_folder() {
 ┗━━━━━━━━━━━━━━━━━━━━━━┛" \
           --border=rounded \
           --reverse \
-          --border-label="┤ Keys: Enter to navigate, Ctrl+h to hide, Esc to go back ├" \
+          --border-label="┤ Keys: Enter=Navigate | Ctrl+h=Hide | Esc=Back ├" \
           --color=border:bright-blue \
           --bind 'ctrl-h:print(hide)+accept' \
           --expect=ctrl-h \
@@ -69,14 +168,21 @@ hide_folder() {
         folder_to_hide="$current_dir/$selected_dir"
         hidden_path="$current_dir/.$selected_dir"
         if mv -n "$folder_to_hide" "$hidden_path" 2>/dev/null; then
+        sudo chown -R root:root "$hidden_path"
+        sudo chmod 700 "$hidden_path"
           encrypted_path=$(encrypt_folder "$hidden_path")
           if [ $? -eq 0 ]; then
-            echo "$encrypted_path" >> "$FOLDER_FILE"
+          if ! sudo grep -qF "$encrypted_path" "$FOLDER_FILE"; then
+             echo "$encrypted_path" | sudo tee -a "$FOLDER_FILE" >/dev/null
+          else
+            gum style --foreground 9 "⚠️ Folder already hidden!"
+          fi
             gum style --foreground 9 "✅ Successfully hidden: $(basename "$folder_to_hide")"
             return
           else
            gum style --foreground 9 "❌ Error: Encryption failed!"
-            mv "$hidden_path" "$folder_to_hide"
+            sudo mv "$hidden_path" "$folder_to_hide"
+            sudo chown -R "$owner:$owner" "$folder_to_hide"
             return 1
           fi
         else
@@ -87,7 +193,6 @@ hide_folder() {
         gum style --foreground 9 "⚠️ Please select a folder first (can't hide parent directory)"
       fi
     fi
-    
     if [ -z "$selected_dir" ]; then 
       return
     elif [ "$selected_dir" = ".." ]; then
@@ -100,52 +205,39 @@ hide_folder() {
   done
 }
 list_hidden_folders() {
-  if [ -s "$FOLDER_FILE" ]; then
-    while IFS= read -r encrypted_path; do
+  if sudo test -s "$FOLDER_FILE"; then
+    sudo cat "$FOLDER_FILE" | while IFS= read -r encrypted_path; do
       decrypted_path=$(decrypt_folder "$encrypted_path")
-      if [ $? -eq 0 ] && [ -n "$decrypted_path" ] && [ -d "$decrypted_path" ]; then
+      if [ $? -eq 0 ] && [ -n "$decrypted_path" ] && sudo test -d "$decrypted_path"; then
         base=$(basename "$decrypted_path")
         display="${base#.}"
         echo "$decrypted_path|$display"
       fi
-    done < "$FOLDER_FILE"
+    done 
   fi
 }
 remove_hidden_entry() {
   local folder_to_remove="$1"
-  if [ -f "$FOLDER_FILE" ]; then
+  sudo bash -c '
     temp_file=$(mktemp)
+    found=0
     while IFS= read -r encrypted_path; do
-      decrypted_path=$(decrypt_folder "$encrypted_path")
-      if [ "$decrypted_path" != "$folder_to_remove" ]; then
+      decrypted_path=$(echo -n "$encrypted_path" | openssl enc -d -aes-256-cbc -salt -pass file:<(echo -n "'"$user_pass"'") -base64 -A 2>/dev/null)
+      if [ "$decrypted_path" = "'"$folder_to_remove"'" ]; then
+        found=1
+      else
         echo "$encrypted_path" >> "$temp_file"
       fi
-    done < "$FOLDER_FILE"
-    mv "$temp_file" "$FOLDER_FILE"
-  fi
-}
-
-MAX_ATTEMPTS=3 
-ATTEMPT_COUNT=0
-lockout_time=30
-while true; do
-  user_pass=$(input_passwd)
-  hashed_user_pass=$(hash_password "$user_pass")
-  stored_pass=$(cat "$PASS_FILE")
-  if [ "$hashed_user_pass" != "$stored_pass" ]; then
-    ATTEMPT_COUNT=$((ATTEMPT_COUNT + 1))
-    gum style --foreground 9 "❌ Access Denied (Attempt $ATTEMPT_COUNT/$MAX_ATTEMPTS)"
-    if [ "$ATTEMPT_COUNT" -ge "$MAX_ATTEMPTS" ]; then    
-      gum style --foreground 9 "🔒 Too many failed attempts. Locking out for $lockout_time seconds..."
-      sleep "$lockout_time"    
-      lockout_time=$((lockout_time + 30))
+    done < "'"$FOLDER_FILE"'"
+    
+    if [ "$found" -eq 1 ]; then
+      sudo mv "$temp_file" "'"$FOLDER_FILE"'"
+      sudo chmod 600 "'"$FOLDER_FILE"'"
+    else
+      rm "$temp_file"
     fi
-    continue
-  else
-    break
-  fi
-done
-
+  '
+}
 while true; do
   choice=$(menu)
   case "$choice" in
@@ -162,7 +254,7 @@ while true; do
         fi
         fullpath=$(echo "$hidden_list" | grep -F "|$selected" | cut -d"|" -f1)
         if [ -d "$fullpath" ]; then
-          xdg-open "$fullpath" &
+          xdg-open "$fullpath" 2>/dev/null || gum style --foreground 9 "❌ Failed to open File Manager."
         else
           gum style --foreground 9 "❌ Folder not found."
         fi
@@ -186,26 +278,43 @@ while true; do
           base=$(basename "$fullpath")
           new_name="${base#.}"
           visible_folder="${dir}/${new_name}"
-          mv "$fullpath" "$visible_folder"
+          sudo mv "$fullpath" "$visible_folder"
           remove_hidden_entry "$fullpath"
-          gum style --foreground 10 "✅ Folder un-hidden successfully."
+        if sudo test -f "$LOCK_FILE"; then
+        owner=$(grep '^owner=' "$LOCK_FILE" | cut -d'=' -f2)
+        if [ -n "$owner" ]; then
+           sudo chown -R "$owner:$owner" "$visible_folder"
         fi
+        fi
+          gum style --foreground 10 "✅ Folder un-hidden successfully."
+      fi
       fi
       ;;
     "🔑 change-passwd")
       if gum confirm "🔑 Do you want to change your password?"; then
+        while true; do 
         new_pass=$(gum input --password --placeholder "🔑 New Password: ")
-        confirm_pass=$(gum input --password --placeholder " Confirm Password: ")
-        if [ "$new_pass" = "$confirm_pass" ]; then
-          hash_password "$new_pass" > "$PASS_FILE"
-          chmod 600 "$PASS_FILE"
-          gum style --foreground 10 "✅ New password set successfully."
-        else
-          gum style --foreground 9 "❌ Passwords do not match."
-        fi
-      else
-        gum style --foreground 11 "↩️ Cancelled...."
+       confirm_pass=$(gum input --password --placeholder " Confirm Password: ")
+      if [ -z "$new_pass" ]; then
+        gum style --foreground 9 "❌ Password cannot be empty!"
+        continue
       fi
+      if [ "$new_pass" != "$confirm_pass" ]; then
+        gum style --foreground 9 "❌ Passwords do not match."
+        continue
+      fi
+      if reencrypt_folders "$user_pass" "$new_pass"; then
+        hash_passwd "$new_pass" | sudo tee "$PASS_FILE" >/dev/null
+        user_pass="$new_pass"
+        gum style --foreground 10 "✅ New password set successfully."
+        break
+      else
+        gum style --foreground 9 "❌ Password change failed. Please try again."
+      fi
+    done
+  else
+    gum style --foreground 11 "↩️ Cancelled...."
+  fi
       ;;
     "🚪 Exit")
       exit 0
