@@ -1,3 +1,6 @@
+> [!CAUTION]
+> Do not use this to store very sensitive data. Just for more general stuff like photos, movies, and that kind of thing. **It is secure until `someone doesn't know the root password`.**(color: red)
+
 # ▪️📂 dotfold
 A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing them with "." , changes ownership to root and securely stores folder metadata using OpenSSL and a SHA-256 hashed password.
 ### 🔍 Preview
@@ -15,10 +18,6 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
    ```
    dotfold hide "folder name" 
    ```
-## 💡Tips
-- Move your folder to a complex path like /folder/folder3/folder2/.folder/MY-folder — somewhere even you might have trouble finding it.
-- Exclude those folders from being indexed by tools like tracker3 and locate
-- Now you’ve got the perfect hidden folder setup.
  ----
 ### Other commands 
    ```
@@ -83,10 +82,3 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
    ```
    ./uninstall.sh
    ```
----
-## Changelog (v1.1)
-
-- **Enhanced Security**: When hiding a folder, its ownership is now changed to `root`, ensuring that unauthorized users cannot access it.
-- **Lock File Support**: Added a lock file that tracks the folder's owner, attempt count, attempt time, and lockout period.
-- **Password Protection**: Improved password security with a lockout mechanism, preventing bypass attempts.
-- **Multi-User Compatibility**: Enhanced functionality for multi-user systems to ensure consistent and secure access control.
