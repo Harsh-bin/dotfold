@@ -1,5 +1,5 @@
 > [!CAUTION]
-> Do not use this to store very sensitive data. Just for more general stuff like photos, movies, and that kind of thing. **It is secure until `someone doesn't know the root password`.**(color: red)
+> Do not use this to store very sensitive data. Just for more general stuff like photos, movies, and that kind of thing. **It is secure until `someone doesn't know the root password`.**
 
 # ▪️📂 dotfold
 A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing them with "." , changes ownership to root and securely stores folder metadata using OpenSSL and a SHA-256 hashed password.
