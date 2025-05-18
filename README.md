@@ -1,5 +1,6 @@
 > [!CAUTION]
-> Do not use this to store very sensitive data. Just for more general stuff like photos, movies, and that kind of thing. **It is secure until `someone doesn't know the root password`.**
+> Do not use this to store very sensitive data. Just for more general stuff like photos, movies, and that kind of thing. **It is secure until `someone doesn't know the root password`.** <br> </br>
+> I build this "over-engineered" tool..... for myself and thought others may need this.
 
 # ▪️📂 dotfold
 A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing them with "." , changes ownership to root and securely stores folder metadata using OpenSSL and a SHA-256 hashed password.
@@ -7,6 +8,9 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
 ![](/preview/dotfold.png)
 --
 ![](/preview/preview.gif)
+--
+you can't navigate outside current user home directroy in tui mode. NOTE: Symlink can cause issue
+![](/preview/pathcontrol.png)
 --
 # 🔵 CLI Usages
 ### Hiding folders
