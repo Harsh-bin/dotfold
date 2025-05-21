@@ -9,7 +9,7 @@ A small, 🔐 password-protected TUI + CLI tool that hides folders by prefixing 
 --
 ![](/preview/preview.gif)
 --
-you can't navigate outside current user home directroy in tui mode. NOTE: Symlink can cause issue
+Similarly, you can't navigate outside current user home directroy in tui mode.
 ![](/preview/pathcontrol.png)
 --
 # 🔵 CLI Usages
