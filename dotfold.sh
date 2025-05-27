@@ -140,7 +140,7 @@ authenticate() {
         echo "unlock_time=$current_time"
         echo "lockout=0"
         echo "owner=$(logname)"
-      } | sudo tee "$LOCK_FILE" >/dev/null | sudo tee "$LOCK_FILE" >/dev/null
+      } | sudo tee "$LOCK_FILE" >/dev/null
       
       gum style --foreground 9 "❌ Access Denied (Attempt $attempt_count/$MAX_ATTEMPTS)"
       
@@ -347,7 +347,8 @@ case "$1" in
     done
     
     if [ -d "$full_path" ]; then
-      xdg-open "$full_path" 2>/dev/null || gum style --foreground 9 "❌ Failed to open File Manager."
+    # added fix for thumbail generation on x11
+      pkexec env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY dbus-launch xdg-open "$full_path" 2>/dev/null || gum style --foreground 9 "❌ Failed to open File Manager."
     else
       gum style --foreground 9 "❌ Folder not found: $full_path"
     fi
